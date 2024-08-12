@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* Base styles */
+body {
+    transition: background-color 0.3s, color 0.3s;
+}
+
+header {
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* Light mode */
+body:not(.dark-mode) {
+    background-color: #f3f4f6; /* Light gray background */
+    color: #111827; /* Dark text */
+}
+
+header:not(.dark-mode) {
+    background-color: #ffffff; /* White background */
+    color: #111827; /* Dark text */
+}
+
+/* Dark mode */
+body.dark-mode {
+    background-color: #1f2937; /* Dark gray background */
+    color: #e5e7eb; /* Light text */
+}
+
+header.dark-mode {
+    background-color: #374151; /* Dark gray background */
+    color: #e5e7eb; /* Light text */
+}
+
+/* Transition for smooth effect */
+body, header {
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* Button container */
+.button-container {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Adjust spacing as needed */
+}
+
+/* Toggling button styles */
+#theme-toggle {
+    transition: background-color 0.3s, color 0.3s;
+}
+

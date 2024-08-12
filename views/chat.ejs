@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        #videos {
+            display: grid;
+            grid-template-columns: 1fr;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .video-player {
+            background-color: black;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .smallFrame {
+            position: fixed;
+            bottom: 100px;
+            right: 20px;
+            height: 170px;
+            width: 300px;
+            border-radius: 6px;
+            z-index: 10;
+        }
+
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1em;
+        }
+
+        .control-container {
+            background-color: #6df966;
+            padding: 20px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .control-container svg {
+            height: 30px;
+            width: 30px;
+        }
+
+        #leave-btn {
+            background-color: rgb(255, 80, 80, 1);
+        }
+
+        @media screen and (max-width: 600px) {
+            .smallFrame {
+                height: 80px;
+                width: 120px;
+            }
+
+            .control-container img {
+                height: 20px;
+                width: 20px;
+            }
+        }
+    </style>
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+
+<body class="flex flex-col h-dvh bg-gray-200">
+    <%- include('partials/header') %>
+    <div class="fixed videoblock hidden z-[222] w-full h-svh">
+        <div id="videos">
+            <video class="video-player" id="localVideo" autoplay muted playsinline></video>
+            <video class="video-player" id="remoteVideo" autoplay playsinline></video>
+        </div>
+        <div id="controls" class="flex justify-center space-x-4 p-4 bg-gray-800 bg-opacity-50">
+            <!-- Camera Button -->
+            <div class="control-container p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors cursor-pointer" id="cameraButton">
+                <span class="text-white text-2xl">📷</span>
+            </div>
+    
+            <!-- Hangup Button -->
+            <div class="control-container p-2 rounded-full bg-red-700 hover:bg-red-600 transition-colors cursor-pointer" id="hangup">
+                <span class="text-white text-2xl">🔴</span>
+            </div>
+    
+            <!-- Microphone Button -->
+            <!-- Microphone Button -->
+<div class="control-container p-2 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors cursor-pointer" id="micButton">
+    <span class="text-white text-2xl">🎙️</span>
+</div>
+
+        </div>
+    </div>
+    
+        <div id="incoming-call"
+            class="fixed hidden z-[222] w-full h-dvh bg-gray-900 bg-opacity-75 flex items-center justify-center">
+            <div class="bg-white p-8 rounded-md text-center">
+                <p class="mb-4">Incoming Call...</p>
+                <button id="accept-call" class="bg-green-500 text-white py-2 px-4 rounded-md">Accept</button>
+                <button id="reject-call" class="bg-red-500 text-white py-2 px-4 rounded-md ml-2">Reject</button>
+            </div>
+        </div>
+        <main class="flex-1 p-4 overflow-y-auto relative" id="message-container">
+            <div
+                class="text-zinc-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2/3 text-center nobody">
+                bhagwaan kasam koi nahi hai yaha, ruko shaayad koi
+                aajaye.</div>
+        </main>
+        <form id="chatform" class="bg-white p-4 flex">
+            <input type="hidden" id="userid" value="">
+             <input type="text" id="messagebox"
+       class="flex-1 border border-gray-300 rounded-md px-4 py-3 text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm transition-shadow duration-150 ease-in-out"
+       placeholder="Type a message">
+
+                <button type="submit"
+                class="ml-2 bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600">Send</button>
+        </form>
+        <video id="local-video" class="hidden" autoplay></video>
+        <video id="remote-video" class="hidden" autoplay></video>
+        <script src="/js/main.js"></script>
+        <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"
+            integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO"
+            crossorigin="anonymous"></script>
+
+         <script>
+            const socket = io(); // called io
+            const chatform = document.querySelector("#chatform");
+            const messagebox = document.querySelector("#messagebox");
+            const messagecontainer = document.querySelector("#message-container");
+
+            let room;
+
+            socket.emit("joinroom");
+
+            socket.on("joined", function (roomname) {
+                room = roomname;
+                document.querySelector(".nobody").classList.add("hidden");
+            })
+
+            socket.on("message", function (message) {
+                receiveMessage(message);
+            })
+
+            chatform.addEventListener("submit", function (event) {
+                event.preventDefault();// submit stop
+                socket.emit("message", { room: room, message: messagebox.value });
+                attachMessage(messagebox.value);
+                messagebox.value = ""; // input box clear after submit
+            })
+            // left - right chat alignment
+            function attachMessage(message) {
+    // 1. Create a container for the user message
+    const userMessageContainer = document.createElement('div');
+    userMessageContainer.classList.add('flex', 'my-2', 'justify-end');
+
+    // 2. Create a div for the user message content
+    const userMessageDiv = document.createElement('div');
+    userMessageDiv.classList.add('bg-blue-500', 'text-white', 'p-3', 'rounded-lg', 'max-w-xs');
+
+    // 3. Create a paragraph element for the message text
+    const userMessageText = document.createElement('p');
+    userMessageText.textContent = message;
+
+    // 4. Append the message text to the message div
+    userMessageDiv.appendChild(userMessageText);
+
+    // 5. Append the message div to the message container
+    userMessageContainer.appendChild(userMessageDiv);
+
+    // 6. Append the message container to the message container in the DOM
+    document.getElementById('message-container').appendChild(userMessageContainer);
+
+    // 7. Scroll to the bottom of the message container
+    document.querySelector("#message-container").scrollTop = document.querySelector("#message-container").scrollHeight;
+}
+
+
+function receiveMessage(message) {
+    // 1. Create a container for the received message
+    const messageContainer = document.createElement('div');
+    messageContainer.classList.add('flex', 'my-2', 'justify-start');
+
+    // 2. Create a div for the received message content
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('bg-gray-300', 'text-gray-800', 'p-3', 'rounded-lg', 'max-w-xs');
+
+    // 3. Create a paragraph element for the message text
+    const messageText = document.createElement('p');
+    messageText.textContent = message;
+
+    // 4. Append the message text to the message div
+    messageDiv.appendChild(messageText);
+
+    // 5. Append the message div to the message container
+    messageContainer.appendChild(messageDiv);
+
+    // 6. Append the message container to the message container in the DOM
+    document.getElementById('message-container').appendChild(messageContainer);
+
+    // 7. Scroll to the bottom of the message container
+    document.querySelector("#message-container").scrollTop = document.querySelector("#message-container").scrollHeight;
+}
+
+
+// WEBRTC START
+ // Variables for local and remote streams, peer connection, and call status
+let localStream;
+let remoteStream;
+let peerConnection;
+let inCall = false; // Call status indicator(False)
+
+// RTC configuration settings, including ICE servers for connectivity
+const rtcSettings = {
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }], // STUN server to get public IP address
+    //ICE (Interactive Connectivity Establishment) servers help WebRTC applications establish peer-to-peer connections, even when users are behind NAT (Network Address Translation) or firewalls
+
+};
+
+
+// Initialization function to set up event listeners and media streams
+const initialize = async () => { //          1
+    // Listen for signaling messages from the server
+    socket.on("signalingMessage", handleSignalingMessage); // 21 in backend and here 22
+
+    try {//5
+        // Get media stream (audio and video) from the user's camera and microphone
+        localStream = await navigator.mediaDevices.getUserMedia({ // 2
+            audio: true,
+            video: true
+        });
+
+        // Set the local video element to display the user's own stream
+        document.querySelector("#localVideo").srcObject = localStream; // 3
+        document.querySelector("#localVideo").style.display = "block";
+
+        // Initiate an offer to start the call with other 
+        initiateOffer(); //6
+
+        inCall = true; // Update call status // 4
+    } catch (err) {
+        // Handle errors if media access is denied or other issues
+        console.log("Rejected by browser: " + err);
+    }
+}
+
+// Function to create and send an offer to the remote peer
+const initiateOffer = async () => { // 7
+    await createPeerConnection();//8
+    try {
+        // Create an offer and set it as the local description
+        const offer = await peerConnection.createOffer(); // 17
+        await peerConnection.setLocalDescription(offer); // 18
+
+        // Send the offer to the signaling server // 19
+        socket.emit("signalingMessage", {
+            room,
+            message: JSON.stringify({
+                type: "offer",
+                offer
+            })
+        });
+    } catch (err) { // 20
+        // Handle errors in offer creation
+        console.log("Error in creating offer: " + err);
+    }
+}
+
+// Function to create a new RTCPeerConnection and set up handlers
+const createPeerConnection = () => { //9
+    peerConnection = new RTCPeerConnection(rtcSettings); //10  // RTCPeerConnection WebRTC ka ek fundamental class hai jo peers (yaani, do devices) ke beech media aur data exchange ko handle karta hai. Iska primary role network connection establish karna aur maintain karna hai, taki audio, video, aur data streams efficiently transfer ho sakein.
+
+    // Create a new MediaStream for remote video
+    remoteStream = new MediaStream(); // blank video audio  // 11
+
+    // Set up the remote video element  // 12
+    document.querySelector("#remoteVideo").srcObject = remoteStream;
+    document.querySelector("#remoteVideo").style.display = "block";
+    document.querySelector("#localVideo").classList.add("smallFrame");
+
+    // Add local stream tracks(audio , video array) to the peer connection one by one // 13
+    localStream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, localStream);
+    });
+
+    // Handle incoming remote tracks // 14
+    peerConnection.ontrack = (event) => {
+        // console.log(event.streams[0]) --> 
+//  MediaStream { id: "abc123", active: true, 
+//   getAudioTracks: function() { [native code] },
+//   getVideoTracks: function() { [native code] },
+//   getTracks: function() { [native code] }
+//   }
+        event.streams[0].getTracks().forEach(track => {
+            remoteStream.addTrack(track);
+        });
+    };
+
+    // Handle ICE candidate events    // 15
+    peerConnection.onicecandidate = (event) => { // This event handler is triggered whenever the RTCPeerConnection gathers a new ICE candidate
+        if (event.candidate) {
+            console.log("Sending ICE Candidates");
+            socket.emit("signalingMessage", {
+                room:room,
+                message: JSON.stringify({
+                    type: "candidate",
+                    candidate: event.candidate
+                })
+            });
+        }
+    };
+ 
+    // Log connection state changes   // 16
+    peerConnection.onconnectionstatechange = () => {
+        console.log("Connection state changed: ", peerConnection.connectionState); // It allows you to monitor and react to changes in the state of the WebRTC connection, such as whether it is connected, disconnected, or in the process of establishing a connection like new , connecting, coonected , disconnected , failed , closed
+    };
+}
+
+// Function to handle incoming signaling messages
+const handleSignalingMessage = async (message) => {  // 23
+    const { type, offer, answer, candidate } = JSON.parse(message);
+    if (type === "offer") handleOffer(offer);
+    if (type === "answer") handleAnswer(answer);
+    if (type === "candidate" && peerConnection) {
+        try {
+            await peerConnection.addIceCandidate(candidate);
+        } catch (error) {
+            console.log(error);
+        }
+    }
+    if (type === "hangup") {
+        hangup(); // Handle call hangup
+    }
+}
+
+// Function to handle an incoming offer
+const handleOffer = async (offer) => {  // 24
+    await createPeerConnection(); // Create a new RTCPeerConnection instance
+
+    try {
+        // Set the remote description with the offer received from the remote peer
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(offer)); // This step is crucial for the peer connection to understand the offer and prepare to establish the connection
+
+        // Create an answer to the offer   // 25
+        const answer = await peerConnection.createAnswer();
+
+        // Set the local description with the created answer
+        await peerConnection.setLocalDescription(answer);
+        // Creates an SDP (Session Description Protocol) answer in response to the offer
+        // The answer is sent back to the remote peer to complete the WebRTC handshake
+
+        // Send the answer back to the signaling server // 26
+        socket.emit("signalingMessage", { room, message: JSON.stringify({ type: "answer", answer }) });
+
+        // Update the call status
+        inCall = true;
+    } catch (error) {
+        console.log("Failed to handle offer");
+    }
+};
+
+
+// Function to handle an incoming answer
+const handleAnswer = async (answer) => { // 27
+    try {
+         // Set the remote description with the answer received from the remote peer
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+    } catch (error) {
+        console.log("Failed to handle answer");
+    }
+}
+
+// Event listener for starting a video call  //28 then backend 29
+document.querySelector("#video-call-btn")
+    .addEventListener("click", function () {
+        socket.emit("startVideoCall", { room });
+    });
+
+// Event listener for incoming call notifications
+socket.on("incomingCall", function () {  // 30
+    console.log("Incoming call");
+    document.querySelector("#incoming-call").classList.remove("hidden");
+});
+
+// Event listener for accepting a call
+socket.on("callAccepted", function () {  // 32
+    initialize();
+    document.querySelector(".videoblock").classList.remove("hidden");
+});
+
+
+
+
+// Event listener for accepting a call from the UI
+document.querySelector("#accept-call")
+    .addEventListener("click", function () {
+        document.querySelector("#incoming-call").classList.add("hidden");
+        initialize();
+        document.querySelector(".videoblock").classList.remove("hidden");
+        socket.emit("acceptCall", { room });
+    });
+
+// Event listener for rejecting a call from the UI
+document.querySelector("#reject-call")
+    .addEventListener("click", function () {
+        document.querySelector("#incoming-call").classList.add("hidden");
+        socket.emit("rejectCall", { room });
+    });
+
+// Event listener for call rejection notifications
+socket.on("callRejected", function () {
+    alert("Call rejected by other user");
+});
+
+// Event listener for ending a call
+document.querySelector("#hangup")
+    .addEventListener("click", function () {
+        hangup();
+    });
+
+
+// Function to end a call and clean up
+function hangup() {
+    if (peerConnection) {
+        // Close the peer connection
+        peerConnection.close();
+        peerConnection = null;
+
+        // Stop all tracks in the local media stream
+        localStream.getTracks().forEach(track => track.stop());
+
+        // Hide the video elements
+        document.querySelector(".videoblock").classList.add("hidden");
+
+        // Notify the signaling server that the call has ended
+        socket.emit("signalingMessage", { room, message: JSON.stringify({ type: "hangup" }) });
+
+        // Update the call status
+        inCall = false;
+    }
+}    
+</script>
+       
+ 
+</body>
+
+</html>
+<!-- 
+ICE (Interactive Connectivity Establishment) servers help WebRTC applications establish peer-to-peer connections, even when users are behind NAT (Network Address Translation) or firewalls
+
+STUN (Session Traversal Utilities for NAT) Servers:
+
+Purpose: To discover the public IP address of a device behind a NAT.
+Example: stun:stun.l.google.com:19302
+Usage: Helps in figuring out the public-facing address of the device so that it can be used for communication with other peers.
+TURN (Traversal Using Relays around NAT) Servers:
+
+Purpose: To relay media when a direct peer-to-peer connection cannot be established.
+Example: turn:turn.example.com, and it usually requires authentication.
+Usage: Acts as an intermediary to relay the data when direct connection fails.
+
+ICE Candidates
+ICE Candidates are the potential network addresses that can be used to establish a peer-to-peer connection. During the connection setup, peers exchange these candidates to find the best possible connection path.
+
+Types of ICE Candidates:
+Host Candidates: Directly correspond to the local network interfaces.
+Server Reflexive Candidates: Obtained from a STUN server and represent the public IP address of the NAT device.
+Relayed Candidates: Obtained from a TURN server and are used when direct communication fails.
+
+-->
