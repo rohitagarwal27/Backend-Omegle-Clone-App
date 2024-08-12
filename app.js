@@ -63,6 +63,6 @@ app.use(express.json());
 
 app.use('/', indexRouter);
 
-server.listen(3000, () =>
+server.listen(process.env.PORT || 3000, () =>
     console.log(`App listening on port 3000!`)
 );
